@@ -1,0 +1,52 @@
+# Llamadas a Procedimientos Remotos. Implementación y medición
+
+El objetivo de este proyecto es  crear un servicio de clave-valor no replicado y proporcionar un conjunto de operaciones sencillas a los clientes. Aprender a usar una biblioteca RPC, a diseñar un servidor que pueda recuperarse correctamente y generar respuestas correctas, y a realizar mediciones utilizando benchmarks sencillos.
+
+## Fundamentos. 
+El servidor debe proporcionar un servicio simple de almacenamiento de clave-valor a los clientes. No es necesario que el servidor esté replicado; es decir, un único servidor almacena los datos y el servicio no estará disponible si falla. Tanto las claves como los valores son cadenas simples; las claves suelen tener 128 bytes y los valores no tienen límite de tamaño (pueden ser de hasta unos pocos megabytes). Puede usar C++ o Go para la implementación.
+
+**API**. Solo debe admitir las siguientes tres operaciones:
+
+* set(string key, string value): establece el valor de la clave dada;
+* get(string key): devuelve el valor de la clave dada;
+* getPrefix(string prefixKey): devuelve una lista de valores cuyas claves empiezan por prefixKey.
+Nota: Los resultados devueltos por el servidor podrían ser grandes; debe tener cuidado con estos casos.
+
+## Comunicación. 
+Utilizará la biblioteca GRPC para la comunicación entre los clientes y el servidor. Su servidor debe exportar los métodos mencionados anteriormente y un método stat para recuperar estadísticas del servidor (véase más adelante). En este proyecto, debe usar solo RPC para la comunicación. Sin embargo, puede optar por usar una biblioteca RPC diferente a GRPC (por ejemplo, Apache Thrift).
+
+## Recuperación de fallos y durabilidad. 
+Su almacén de clave-valor debe ser capaz de recuperarse de fallos y mantener la mayor consistencia y durabilidad posible. En concreto, los clientes nunca deberían notar ninguna pérdida de datos y siempre deberían ver las escrituras más recientes, incluso ante fallos. Por lo tanto, el servidor debe ser capaz de tolerar fallos de procesos, fallos del sistema operativo y cortes de energía. Se puede asumir que los datos, una vez almacenados en el dispositivo, no se corromperán arbitrariamente. Sin embargo, podría ser necesario gestionar casos en los que la máquina falle a mitad de camino al intentar escribir un valor grande, etc.
+
+## Almacenamiento del servidor. 
+Como se mencionó anteriormente, el almacén clave-valor debe ser persistente; el sistema no debe perder ningún dato. Puede organizar el almacenamiento en el servidor de la forma que considere más adecuada para lograr este objetivo. En sistemas reales como MongoDB, los desarrolladores utilizan capas de almacenamiento como RocksDB o WiredTiger y las configuran para diferentes garantías de durabilidad. En este proyecto desarrollará su propia capa de almacenamiento. También puede diseñar y optimizar la capa de almacenamiento como desee; por ejemplo, podría tener una tabla hash en memoria para acelerar las lecturas, etc.
+
+## Gestión de clientes. 
+Su servidor debe ser capaz de soportar muchos clientes concurrentes. Un aspecto a considerar es el manejo de los datos: ¿cómo evitar que muchas solicitudes concurrentes (algunas de ellas escrituras) accedan a los mismos elementos simultáneamente? Una forma obvia de resolver este problema sería usar bloqueos. Pero, tenga cuidado de evitar bloqueos innecesarios (por ejemplo, bloquear toda la tabla hash).
+
+## Mediciones. 
+Medirás el rendimiento de tu sistema mediante los siguientes tres experimentos.
+
+1. Establecerá el tamaño del valor en 512 B, 4 KB, 512 KB, 1 MB, 4 MB y medirá la latencia de extremo a extremo para las siguientes dos cargas de trabajo con un solo cliente:
+
+* Una carga de trabajo de solo lectura 
+* Una carga de trabajo con 50 % de lectura y 50 % de escritura
+* Para todas las cargas de trabajo, la distribución de claves debe ser uniforme; es decir, todas las claves tienen la misma probabilidad de ser leídas y actualizadas.
+
+2. Inicializará el almacén con varios pares clave-valor (por ejemplo, 10 millones de pares). Establezca el tamaño del valor en 4 KB para este experimento. Luego, desconectará el servidor y lo reiniciará. Medirá el tiempo que tarda el servidor en reiniciarse y comenzar a atender las s olicitudes de lectura. También comparará las latencias de estas solicitudes get "en frío" con las lecturas "normales" (donde el servidor sigue funcionando y posiblemente ha almacenado en caché una gran cantidad de elementos).
+
+3. Establecerá el número de clientes en 1, 2, 4, 8, 16, 32... y medirá la latencia y el rendimiento del sistema. 
+
+Una carga de trabajo de solo lectura: Una carga de trabajo con 50% de lectura y 50% de escritura. Puede dejar de aumentar el número de clientes una vez que el rendimiento deje de aumentar.
+
+Represente gráficamente la latencia promedio en función del rendimiento para mostrar los resultados del experimento.
+
+Además del rendimiento, también debe validar la corrección o correctitud, en particular, que su almacenamiento ofrezca una alta durabilidad ante fallos. Una forma sencilla de hacerlo sería bloquear el servidor aleatoriamente cuando se ejecuta una carga de trabajo y comprobar si puede recuperar todos los datos escritos. Puede desarrollar otras formas de realizar estas pruebas. También debe comprobar que la escritura y la lectura simultáneas no generen condiciones de competencia entre datos.
+
+**Qué máquinas usar:** Puede usar sus maquinas portátiles o computadoras de escritorio personales para el desarrollo y las pruebas. También puede realizar las mediciones iniciales en una sola máquina; es decir, tanto el servidor como los clientes pueden ser simplemente procesos diferentes en la misma máquina.
+
+Debes entregar tu código fuente. Tu carpeta debe contener todos los archivos necesarios y un Makefile que compile todo. El binario de tu servidor debe llamarse "lbserver" y el de tu cliente "lbclient". También debes incluir un script de prueba simple que inicialice el servidor y luego inicie algunos clientes (por ejemplo, 10) que realicen algunas escrituras y lecturas (por ejemplo, 10K). El script debe mostrar las siguientes estadísticas en la consola: hora de inicio del servidor, #total_sets completados, #total_gets completados, #total_getprefixes completados. Finalmente, el script debe detener el servidor.
+
+En el video de presentacion del trabajo debe tener lo siguiente. **Primero**, explicar  por qué su almacenamiento es altamente durable (cuál es su protocolo de escritura y qué hacen durante la recuperación, etc.). **Segundo**, mostrarán algunos gráficos de sus mediciones y explicarán las tendencias. Deben ser capaces de comprender y explicar por qué su sistema tiene un comportamiento de rendimiento particular. 
+
+Debes entregar un informe con el experimento paso a paso.  Explique en el informe  por qué su almacenamiento es altamente durable (cuál es su protocolo de escritura y qué hacen durante la recuperación, etc.). Muestre los gráficos de sus mediciones y expliquen las tendencias. Incluya, tambien, la explicacion de por qué su sistema tiene un comportamiento de rendimiento particular. Finalmente, deben incluir las similitudes y diferencias entre el paquete RPC que usaron y lo descrito en el documento de Xerox RPC. 
