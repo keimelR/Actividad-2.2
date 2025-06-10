@@ -1,12 +1,20 @@
-from protobuf import key_value_store_service_pb2
-from protobuf import key_value_store_service_pb2_grpc
+from key_value_store_service_pb2 import (
+    SetKeyValueResponse,
+    GetValueResponse,
+    GetPrefixResponse,
+)
+
+from key_value_store_service_pb2_grpc import (
+    KeyValueStoreServicer,
+    add_KeyValueStoreServicer_to_server
+)
+
 from concurrent import futures
 import os
 import threading
 import grpc
     
-
-class KeyValueStoreService(key_value_store_service_pb2_grpc.KeyValueStoreServiceServicer):
+class KeyValueStoreService(KeyValueStoreServicer):
     def __init__(self):
         self.data = {}
         self.file = open("database.log", "a")
@@ -26,7 +34,7 @@ class KeyValueStoreService(key_value_store_service_pb2_grpc.KeyValueStoreService
         with self.lock:
             key = request.key
             value = self.data.get(key, "")
-            return key_value_store_service_pb2.GetValueResponse(value=value)
+            return GetValueResponse(value=value)
     
     def Set(self, request, context):
         with self.lock:
@@ -39,7 +47,7 @@ class KeyValueStoreService(key_value_store_service_pb2_grpc.KeyValueStoreService
             self.file.flush()
             os.fsync(self.file.fileno())
         
-            return key_value_store_service_pb2.SetKeyValueResponse(success=True)
+            return SetKeyValueResponse(success=True)
     
     def GetPrefix(self, request, context):
         with self.lock:
@@ -52,11 +60,11 @@ class KeyValueStoreService(key_value_store_service_pb2_grpc.KeyValueStoreService
                 if key.startswith(prefix):
                     keys.append(key)
                     values.append(value)
-            return key_value_store_service_pb2.GetPrefixResponse(keys=keys, values=values)
+            return GetPrefixResponse(keys=keys, values=values)
     
 def main():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    key_value_store_service_pb2_grpc.add_KeyValueStoreServiceServicer_to_server(KeyValueStoreService(), server)
+    add_KeyValueStoreServicer_to_server(KeyValueStoreService(), server)
     
     server.add_insecure_port('[::]:50051')
     server.start()
