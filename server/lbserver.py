@@ -1,29 +1,29 @@
-from key_value_store_service_pb2 import (
-    SetKeyValueResponse,
-    GetValueResponse,
-    GetPrefixResponse,
-)
-
-from key_value_store_service_pb2_grpc import (
-    KeyValueStoreServicer,
-    add_KeyValueStoreServicer_to_server
-)
+import key_value_store_service_pb2
+import key_value_store_service_pb2_grpc
 
 from concurrent import futures
 import os
 import threading
 import grpc
-    
-class KeyValueStoreService(KeyValueStoreServicer):
+import datetime
+
+class KeyValueServer(key_value_store_service_pb2_grpc.KeyValueStoreServicer):
     def __init__(self):
         self.data = {}
-        self.file = open("database.log", "a")
+        self.file = open("./server/database.log", "ab")
         self.lock = threading.Lock()
+        
+        self.time_started = 0
+        self.total_requests = 0
+        self.total_set_requests = 0
+        self.total_get_requests = 0
+        self.total_get_prefix_requests = 0
+        
         self.recover_data()
         
     def recover_data(self):
         try:
-            with open("database.log", "r") as file:
+            with open("./server/database.log", "rb") as file:
                 for line in file:
                     key, value = line.strip().split(":", 1)
                     self.data[key] = value
@@ -31,40 +31,81 @@ class KeyValueStoreService(KeyValueStoreServicer):
             pass
         
     def Get(self, request, context):
-        with self.lock:
-            key = request.key
-            value = self.data.get(key, "")
-            return GetValueResponse(value=value)
+        with self.lock:  
+            value = self.data.get(request.key)
+            
+            if value is None:
+                context.set_code(grpc.StatusCode.NOT_FOUND)
+                response = key_value_store_service_pb2.GetValueResponse(status = False, value = f"Clave no encontrada")
+                return response
+                
+            response = key_value_store_service_pb2.GetValueResponse(status = True, value = value)
+
+            self.total_requests += 1
+            self.total_get_requests += 1
+            
+            print(f"Se ha recibido una peticion de Get")
+            return response
     
+    # Crear condicion para que no se pueda escribir un archivo con una llave ya existente, si la llave existe se debe actualizar el valor
     def Set(self, request, context):
         with self.lock:
             key = request.key
             value = request.value
-            self.data[key] = value
             
-            # Log the operation to the file
-            self.file.write(f"{key}:{value}\n")
+            # Medida para evitar claves duplicadas
+            if key in self.data:
+                context.set_code(grpc.StatusCode.ALREADY_EXISTS)
+                response = key_value_store_service_pb2.SetKeyValueResponse(status = False, message = "Se ha detectado una clave ya existente")
+                return response
+               
+            # Log the operation to the file          
+            self.file.write(f"{key}:{value}\n".encode("utf-8"))
             self.file.flush()
             os.fsync(self.file.fileno())
-        
-            return SetKeyValueResponse(success=True)
-    
-    def GetPrefix(self, request, context):
-        with self.lock:
-            prefix = request.prefix
+                
+            self.data[key] = value
             
+            self.total_set_requests += 1
+            self.total_requests += 1
+            
+            print("Se ha recibido una peticion Set")
+            response = key_value_store_service_pb2.SetKeyValueResponse(status = True, message = f"Set: {request.key} = {request.value}")
+            return response
+    
+    def GetPrefixKey(self, request, context):
+        with self.lock:
             keys = []
             values = []
-            
             for key, value in self.data.items():
-                if key.startswith(prefix):
+                if key.startswith(request.prefixKey):
                     keys.append(key)
                     values.append(value)
-            return GetPrefixResponse(keys=keys, values=values)
+            
+            response = key_value_store_service_pb2.GetPrefixResponse(keys = keys, values = values)
+            
+            self.total_get_prefix_requests += 1
+            self.total_requests += 1
+            
+            print("Se ha recibido una peticion getPrefix")
+            return response
+    
+    def Stat(self, request, context):
+        with self.lock:
+            response = key_value_store_service_pb2.StatResponse(
+                time_started = datetime.datetime.now().isoformat(),
+                total_requests = self.total_requests,
+                total_set_requests = self.total_set_requests,
+                total_get_requests = self.total_get_requests,
+                total_get_prefix_requests = self.total_get_prefix_requests
+            )
+            print("Se ha recibido una peticion Stat")
+            return response
+    
     
 def main():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    add_KeyValueStoreServicer_to_server(KeyValueStoreService(), server)
+    key_value_store_service_pb2_grpc.add_KeyValueStoreServicer_to_server(KeyValueServer(), server)
     
     server.add_insecure_port('[::]:50051')
     server.start()

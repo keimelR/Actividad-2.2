@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1dkey_value_store_service.proto\x12\x0fkey_value_store\")\n\x0bSetKeyValue\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t\"&\n\x13SetKeyValueResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\"\x17\n\x08GetValue\x12\x0b\n\x03key\x18\x01 \x01(\t\"0\n\x10GetValueResponse\x12\r\n\x05value\x18\x01 \x01(\t\x12\r\n\x05\x66ound\x18\x02 \x01(\x08\"\x1e\n\tGetPrefix\x12\x11\n\tprefixKey\x18\x01 \x01(\t\"1\n\x11GetPrefixResponse\x12\x0c\n\x04keys\x18\x01 \x03(\t\x12\x0e\n\x06values\x18\x02 \x03(\t2\xef\x01\n\rKeyValueStore\x12I\n\x03Set\x12\x1c.key_value_store.SetKeyValue\x1a$.key_value_store.SetKeyValueResponse\x12\x43\n\x03Get\x12\x19.key_value_store.GetValue\x1a!.key_value_store.GetValueResponse\x12N\n\x0cGetPrefixKey\x12\x1a.key_value_store.GetPrefix\x1a\".key_value_store.GetPrefixResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1dkey_value_store_service.proto\x12\x0fkey_value_store\")\n\x0bSetKeyValue\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t\"6\n\x13SetKeyValueResponse\x12\x0e\n\x06status\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\"\x17\n\x08GetValue\x12\x0b\n\x03key\x18\x01 \x01(\t\"1\n\x10GetValueResponse\x12\x0e\n\x06status\x18\x01 \x01(\x08\x12\r\n\x05value\x18\x02 \x01(\t\"\x1e\n\tGetPrefix\x12\x11\n\tprefixKey\x18\x01 \x01(\t\"1\n\x11GetPrefixResponse\x12\x0c\n\x04keys\x18\x01 \x03(\t\x12\x0e\n\x06values\x18\x02 \x03(\t\"\r\n\x0bStatRequest\"\x97\x01\n\x0cStatResponse\x12\x14\n\x0ctime_started\x18\x01 \x01(\t\x12\x16\n\x0etotal_requests\x18\x02 \x01(\x03\x12\x1a\n\x12total_set_requests\x18\x03 \x01(\x03\x12\x1a\n\x12total_get_requests\x18\x04 \x01(\x03\x12!\n\x19total_get_prefix_requests\x18\x05 \x01(\x03\x32\xb4\x02\n\rKeyValueStore\x12I\n\x03Set\x12\x1c.key_value_store.SetKeyValue\x1a$.key_value_store.SetKeyValueResponse\x12\x43\n\x03Get\x12\x19.key_value_store.GetValue\x1a!.key_value_store.GetValueResponse\x12N\n\x0cGetPrefixKey\x12\x1a.key_value_store.GetPrefix\x1a\".key_value_store.GetPrefixResponse\x12\x43\n\x04Stat\x12\x1c.key_value_store.StatRequest\x1a\x1d.key_value_store.StatResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -34,15 +34,19 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_SETKEYVALUE']._serialized_start=50
   _globals['_SETKEYVALUE']._serialized_end=91
   _globals['_SETKEYVALUERESPONSE']._serialized_start=93
-  _globals['_SETKEYVALUERESPONSE']._serialized_end=131
-  _globals['_GETVALUE']._serialized_start=133
-  _globals['_GETVALUE']._serialized_end=156
-  _globals['_GETVALUERESPONSE']._serialized_start=158
-  _globals['_GETVALUERESPONSE']._serialized_end=206
-  _globals['_GETPREFIX']._serialized_start=208
-  _globals['_GETPREFIX']._serialized_end=238
-  _globals['_GETPREFIXRESPONSE']._serialized_start=240
-  _globals['_GETPREFIXRESPONSE']._serialized_end=289
-  _globals['_KEYVALUESTORE']._serialized_start=292
-  _globals['_KEYVALUESTORE']._serialized_end=531
+  _globals['_SETKEYVALUERESPONSE']._serialized_end=147
+  _globals['_GETVALUE']._serialized_start=149
+  _globals['_GETVALUE']._serialized_end=172
+  _globals['_GETVALUERESPONSE']._serialized_start=174
+  _globals['_GETVALUERESPONSE']._serialized_end=223
+  _globals['_GETPREFIX']._serialized_start=225
+  _globals['_GETPREFIX']._serialized_end=255
+  _globals['_GETPREFIXRESPONSE']._serialized_start=257
+  _globals['_GETPREFIXRESPONSE']._serialized_end=306
+  _globals['_STATREQUEST']._serialized_start=308
+  _globals['_STATREQUEST']._serialized_end=321
+  _globals['_STATRESPONSE']._serialized_start=324
+  _globals['_STATRESPONSE']._serialized_end=475
+  _globals['_KEYVALUESTORE']._serialized_start=478
+  _globals['_KEYVALUESTORE']._serialized_end=786
 # @@protoc_insertion_point(module_scope)

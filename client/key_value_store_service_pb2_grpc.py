@@ -49,6 +49,11 @@ class KeyValueStoreStub(object):
                 request_serializer=key__value__store__service__pb2.GetPrefix.SerializeToString,
                 response_deserializer=key__value__store__service__pb2.GetPrefixResponse.FromString,
                 _registered_method=True)
+        self.Stat = channel.unary_unary(
+                '/key_value_store.KeyValueStore/Stat',
+                request_serializer=key__value__store__service__pb2.StatRequest.SerializeToString,
+                response_deserializer=key__value__store__service__pb2.StatResponse.FromString,
+                _registered_method=True)
 
 
 class KeyValueStoreServicer(object):
@@ -75,6 +80,12 @@ class KeyValueStoreServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def Stat(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_KeyValueStoreServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -92,6 +103,11 @@ def add_KeyValueStoreServicer_to_server(servicer, server):
                     servicer.GetPrefixKey,
                     request_deserializer=key__value__store__service__pb2.GetPrefix.FromString,
                     response_serializer=key__value__store__service__pb2.GetPrefixResponse.SerializeToString,
+            ),
+            'Stat': grpc.unary_unary_rpc_method_handler(
+                    servicer.Stat,
+                    request_deserializer=key__value__store__service__pb2.StatRequest.FromString,
+                    response_serializer=key__value__store__service__pb2.StatResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -175,6 +191,33 @@ class KeyValueStore(object):
             '/key_value_store.KeyValueStore/GetPrefixKey',
             key__value__store__service__pb2.GetPrefix.SerializeToString,
             key__value__store__service__pb2.GetPrefixResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def Stat(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/key_value_store.KeyValueStore/Stat',
+            key__value__store__service__pb2.StatRequest.SerializeToString,
+            key__value__store__service__pb2.StatResponse.FromString,
             options,
             channel_credentials,
             insecure,
