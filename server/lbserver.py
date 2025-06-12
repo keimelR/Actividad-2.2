@@ -158,7 +158,12 @@ class KeyValueServer(key_value_store_service_pb2_grpc.KeyValueStoreServicer):
     
 def main():
     # Iniciamos el servidor gRPC
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+
+    options = [
+    ("grpc.max_send_message_length", 6 * 1024 * 1024),      # 6 MB
+    ("grpc.max_receive_message_length", 6 * 1024 * 1024)    # 6 MB
+]
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10), options=options)
     
     # Añadimos el servicio KeyValueStore al servidor
     key_value_store_service_pb2_grpc.add_KeyValueStoreServicer_to_server(KeyValueServer(), server)
