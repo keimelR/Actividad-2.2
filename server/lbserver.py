@@ -144,7 +144,7 @@ class KeyValueServer(key_value_store_service_pb2_grpc.KeyValueStoreServicer):
         with self.lock:
             # Objeto con todas las estadisticas del servidor
             response = key_value_store_service_pb2.StatResponse(
-                time_started = datetime.datetime.now().isoformat(),
+                time_started = self.time_started,
                 total_requests = self.total_requests,
                 total_set_requests = self.total_set_requests,
                 total_get_requests = self.total_get_requests,
