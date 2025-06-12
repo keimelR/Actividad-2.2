@@ -90,7 +90,7 @@ class KeyValueServer(key_value_store_service_pb2_grpc.KeyValueStoreServicer):
             self.total_requests += 1
             self.total_get_requests += 1
             
-            print(f"Se ha recibido una peticion de Get")
+            # print(f"Se ha recibido una peticion de Get") #Se volvió un comentario para evitar spam en la salida del servidor
             return response
     
     def Set(self, request, context):
@@ -110,7 +110,7 @@ class KeyValueServer(key_value_store_service_pb2_grpc.KeyValueStoreServicer):
             self.total_set_requests += 1
             self.total_requests += 1
             
-            print("Se ha recibido una peticion Set")
+            #print("Se ha recibido una peticion Set") #Se volvió un comentario para evitar spam en la salida del servidor
             
             # Enviamos al usuario la respuesta con los datos realizados
             response = key_value_store_service_pb2.SetKeyValueResponse(status = True, message = f"Set: {request.key} = {request.value}")
