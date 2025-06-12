@@ -32,7 +32,6 @@ def main():
         """
             
         # Bloque de Codigo para ejecutar el metodo Set (establece el valor de la clave dada)
-        """
         try:
             # Generamos la peticion al servidor, segun la key y value
             request = key_value_store_service_pb2.SetKeyValue(key = "2", value = "Prueba Segunda")
@@ -48,8 +47,8 @@ def main():
             print(f"Detalles del error: {e.details()}")
         except Exception as e:
             print(e)
+
         """
-        
         # Bloque de Codigo para ejecutar el metodo Get (Devuelve el valor de la clave dada) 
         try:
             # Generamos la peticion al servidor, segun la key
@@ -67,7 +66,7 @@ def main():
             print(f"Detalles del error: {e.details()}")
         except Exception as e:
             print(e)
-         
+        """
         # Bloque de Codigo para ejecutar el metodo Stat (Recupera las estadísticas del servidor) 
         """    
         try:
