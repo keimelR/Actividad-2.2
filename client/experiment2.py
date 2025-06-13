@@ -66,6 +66,7 @@ def plot_latency_results(hot_latency, cold_latency, restart_duration):
     plt.tight_layout()
     plt.grid(axis='y', linestyle='--', alpha=0.6)
 
+    plt.savefig("experiment2_results.png") 
     plt.show()
 
 def start_server():
@@ -81,7 +82,7 @@ def stop_server(proc):
 
 
 #Espera hasta que el servidor esté listo para aceptar peticiones usando stat cada 0.5 segundos.
-def wait_for_server_ready(timeout=30):
+def wait_for_server_ready(timeout=120):
     print("Esperando que el servidor esté listo...")
     start = time.time()
     client = KVClient()
