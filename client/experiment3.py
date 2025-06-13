@@ -28,6 +28,8 @@ def worker_read_only(stub, latencies, ops_counter, stop_event):
             stub.Get(GetValue(key=key))
             latencies.append((time.time() - start) * 1000)  # Latencia en ms
             ops_counter.append(1)  # Contador de operaciones
+            print(f"OPERACION = GET | Key = {key} | Latencia = {(time.time() - start):.6f}")
+
         except Exception as e:
             print(f"[ERROR] Lectura fallida para clave '{key}': {e}")
 
@@ -43,6 +45,8 @@ def worker_read_write(stub, latencies, ops_counter, stop_event):
                 stub.Get(GetValue(key=key))
                 latencies.append((time.time() - start) * 1000)
                 ops_counter.append(1)
+                print(f"OPERACION = GET | Key = {key} | Latencia = {(time.time() - start):.6f}")
+
             except:
                 pass
         else:
@@ -53,6 +57,8 @@ def worker_read_write(stub, latencies, ops_counter, stop_event):
                 stub.Set(SetKeyValue(key=key, value=value))
                 latencies.append((time.time() - start) * 1000)
                 ops_counter.append(1)
+                print(f"OPERACION = SET | Key = {key} | Latencia = {(time.time() - start):.6f}")
+
             except:
                 pass
 

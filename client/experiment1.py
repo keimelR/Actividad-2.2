@@ -23,30 +23,37 @@ ITERATIONS = 100
 # FUNCIÓN: Solo Lectura
 def benchmark_read_only(client, keys):
     latencies = []
-    for _ in range(ITERATIONS):
+    for i in range(ITERATIONS):
         key = random.choice(keys)  # Selecciona una clave aleatoria
         start = time.time()        # Marca el inicio del tiempo
         client.get(key)            # Realiza una lectura
         end = time.time()          # Marca el fin del tiempo
         latencies.append(end - start)  # Calcula y guarda la latencia
+        print(f"| {i + 1} / {ITERATIONS} | OPERACION = SET | Key = {key} | LATENCIA = {(end - start):.6f} |")
+
     return latencies
 
 # FUNCIÓN: 50% Lectura / 50% Escritura
 def benchmark_mixed(client, keys, value):
     latencies = []
-    for _ in range(ITERATIONS):
+    for i in range(ITERATIONS):
         key = random.choice(keys)
         if random.random() < 0.5:
             # Operación de lectura
             start = time.time()
             client.get(key)
             end = time.time()
+            operation_type = "GET"
         else:
             # Operación de escritura
             start = time.time()
             client.set(key, value)
             end = time.time()
+            operation_type = "SET" 
+            
         latencies.append(end - start)  # Registra la latencia de cada operación
+        print(f"| {i + 1} / {ITERATIONS} | OPERACION = {operation_type} | Key = {key} | LATENCIA = {(end - start):.6f} |")
+
     return latencies
 
 
@@ -56,7 +63,8 @@ def run_experiment():
     keys = [f"key{i}" for i in range(KEY_COUNT)]  # Genera las claves: key0, key1, ..., key999
 
     print("Inicializando claves con valor pequeño...")
-    for key in keys:
+    for i, key in enumerate(keys):
+        print(f"| CLAVE NUMERO = {i + 1} | OPERACION = SET | KEY = {key} |")
         client.set(key, "init")  # Pone un valor corto inicial en cada clave
 
     read_only_results = []
@@ -69,8 +77,10 @@ def run_experiment():
 
         # Sobrescribe todas las claves con valores del tamaño actual
         print("Sobrescribiendo claves con valores grandes...")
-        for key in keys:
+        for i, key in enumerate(keys):
             client.set(key, value)
+            print(f"| CLAVE NUMERO = {i + 1} | OPERACION = SET | KEY = {key} |")
+
 
         # Experimento 1: Solo lecturas
         print(">> Ejecutando carga de solo lectura...")

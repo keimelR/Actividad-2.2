@@ -17,11 +17,11 @@ server_script = os.path.abspath("./server/lbserver.py")
 def populate_store(client):
     print(f"Ingresando {NUM_KEYS} claves de {VALUE_SIZE} bytes...")
     for i in range(NUM_KEYS):
-        if i % 500 == 0:
-            print(f"Ingresando la clave: {i}")
         key = f"key_{i}"
         value = generate_value(VALUE_SIZE)
         client.set(key, value)
+        print(f"| {i + 1} / {NUM_KEYS} | OPERACION = SET | Key = {key} |")
+
     print("Población del almacén completada.")
 
 
@@ -30,11 +30,13 @@ def measure_latency(client, description):
     print(f"\n=== Mediciones de {description} ===")
     print(f"Midendo latencia con {HOT_READS} lecturas aleatorias...")
     total_time = 0
-    for _ in range(HOT_READS):
+    for i in range(HOT_READS):
         key = f"key_{random.randint(0, NUM_KEYS - 1)}"
         start = time.time()
         client.get(key)
         total_time += (time.time() - start)
+        print(f"| {i + 1} / {NUM_KEYS} | OPERACION = GET | Key = {key} | Latencia = {(time.time() - start):.6f}")
+
     avg_latency = (total_time / HOT_READS) * 1000  # Convierte a milisegundos
     print(f"Latencia promedio: {avg_latency:.3f} ms")
     return avg_latency
