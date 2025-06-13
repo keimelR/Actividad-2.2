@@ -4,7 +4,7 @@ import os
 import random
 from lbclient import KVClient, generate_value  # Cliente y generador de valores
 import sys
-
+import matplotlib.pyplot as plt
 
 NUM_KEYS = 10000           # Número de claves a insertar en el almacén
 VALUE_SIZE = 4096          # Tamaño de cada valor (4 KB)
@@ -17,6 +17,8 @@ server_script = os.path.abspath("./server/lbserver.py")
 def populate_store(client):
     print(f"Ingresando {NUM_KEYS} claves de {VALUE_SIZE} bytes...")
     for i in range(NUM_KEYS):
+        if i % 500 == 0:
+            print(f"Ingresando la clave: {i}")
         key = f"key_{i}"
         value = generate_value(VALUE_SIZE)
         client.set(key, value)
@@ -37,6 +39,32 @@ def measure_latency(client, description):
     print(f"Latencia promedio: {avg_latency:.3f} ms")
     return avg_latency
 
+def plot_latency_results(hot_latency, cold_latency, restart_duration):
+    """ Genera el grafico de barra de la latencia """
+    
+    labels = ['Latencia en caliente (ms)', 'Latencia en frío (ms)', 'Reinicio del servidor (s)']
+    values = [hot_latency, cold_latency, restart_duration]
+    colors = ['#4caf50', '#2196f3', '#f44336']
+
+    fig, ax = plt.subplots()
+    bars = ax.bar(labels, values, color=colors)
+
+    # Añade etiquetas con los valores numéricos encima de cada barra
+    for bar in bars:
+        height = bar.get_height()
+        ax.annotate(f'{height:.2f}',
+                    xy=(bar.get_x() + bar.get_width() / 2, height),
+                    xytext=(0, 3),  # desplazamiento vertical
+                    textcoords="offset points",
+                    ha='center', va='bottom')
+
+    ax.set_ylabel('Tiempo (ms / s)')
+    ax.set_title('Comparación de latencia y tiempo de reinicio')
+    plt.xticks(rotation=15)
+    plt.tight_layout()
+    plt.grid(axis='y', linestyle='--', alpha=0.6)
+
+    plt.show()
 
 def start_server():
     print("\nIniciando el servidor...")
@@ -111,7 +139,8 @@ def run_experiment():
     print(f"Lectura en caliente: {hot_latency:.3f} ms")
     print(f"Lectura en frío:    {cold_latency:.3f} ms")
     print(f"Tiempo de reinicio: {restart_duration:.3f} segundos")
-
+    
+    plot_latency_results(hot_latency, cold_latency, restart_duration)
 
 if __name__ == "__main__":
     run_experiment()

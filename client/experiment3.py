@@ -56,12 +56,13 @@ def worker_read_write(stub, latencies, ops_counter, stop_event):
             except:
                 pass
 
+def run_worker_thread(worker_func, latencies, ops_counter, stop_event):
+    with grpc.insecure_channel(SERVER_ADDRESS) as channel:
+        stub = KeyValueStoreStub(channel)
+        worker_func(stub, latencies, ops_counter, stop_event)
 
 #Ejecuta el test con el número de clientes y modo (solo lectura o mixto).
 def run_test(num_clients, read_only=True):
-    channel = grpc.insecure_channel(SERVER_ADDRESS)
-    stub = KeyValueStoreStub(channel)
-
     latencies = []
     ops_counter = []
     stop_event = threading.Event()
@@ -72,7 +73,7 @@ def run_test(num_clients, read_only=True):
     # Crear y lanzar hilos de clientes
     threads = []
     for _ in range(num_clients):
-        thread = threading.Thread(target=worker_func, args=(stub, latencies, ops_counter, stop_event))
+        thread = threading.Thread(target=run_worker_thread, args=(worker_func, latencies, ops_counter, stop_event))
         thread.start()
         threads.append(thread)
 
@@ -82,8 +83,6 @@ def run_test(num_clients, read_only=True):
     # Esperar que terminen los hilos
     for t in threads:
         t.join()
-
-    channel.close()
 
     # Calcular métricas
     total_ops = len(ops_counter)
