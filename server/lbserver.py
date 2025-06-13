@@ -10,15 +10,16 @@ import datetime
 import struct
 
 class KeyValueServer(key_value_store_service_pb2_grpc.KeyValueStoreServicer):
-    def __init__(self):
+    def __init__(self, num_locks = 32):
         # Diccionario para guardar los par clave-valor
         self.data = {}
         
         # Archivo que guarda los pares clave-valor
         self.file = open("./server/database.log", "ab")
         
-        # Hilo para gestionar la concurrencia
-        self.lock = threading.Lock()
+        # Pool de hilos para gestionar la concurrencia
+        self.num_locks = num_locks
+        self.locks = [threading.Lock() for _ in range(num_locks)]
         
         # Metricas del servidor
         self.time_started = datetime.datetime.now().isoformat()
@@ -29,6 +30,11 @@ class KeyValueServer(key_value_store_service_pb2_grpc.KeyValueStoreServicer):
         
         # Almacena los clave-valor en el diccionario
         self.recover_data()
+        
+    def _get_lock_for_key(self, key: str):
+        """Calcula el hash de la clave para obtener el lock específico."""
+        index = hash(key) % self.num_locks
+        return self.locks[index]
         
     def recover_data(self):
         """ Lee la base de datos 'database.log' y almacena las claves y valores en el diccionario """
@@ -73,7 +79,9 @@ class KeyValueServer(key_value_store_service_pb2_grpc.KeyValueStoreServicer):
         
     def Get(self, request, context):
         """ Devuelve el valor de la clave dada """
-        with self.lock:  
+        
+        lock = self._get_lock_for_key(request.key)
+        with lock:
             # Obtenemos el valor en el diccionario a partir de la clave
             value = self.data.get(request.key)
             
@@ -95,11 +103,13 @@ class KeyValueServer(key_value_store_service_pb2_grpc.KeyValueStoreServicer):
     
     def Set(self, request, context):
         """ Establece el valor de la clave dada """
-        with self.lock:
-            # Obtenemos la clave y valor enviado por el cliente
-            key = request.key
-            value = request.value
-               
+        
+        # Obtenemos la clave y valor enviado por el cliente
+        key = request.key
+        value = request.value
+        
+        lock = self._get_lock_for_key(key)
+        with lock:
             # Serializamos los datos
             self.write_entry(key, value)
             
@@ -118,7 +128,11 @@ class KeyValueServer(key_value_store_service_pb2_grpc.KeyValueStoreServicer):
     
     def GetPrefixKey(self, request, context):
         """ Devuelve una lista de valores cuyas claves empiezan por prefixKey """
-        with self.lock:
+        
+        for lock in self.locks:
+            lock.acquire()
+            
+        try:
             # Iniciamos una lista de claves y valores (para valores coincidentes)
             keys = []
             values = []
@@ -138,10 +152,14 @@ class KeyValueServer(key_value_store_service_pb2_grpc.KeyValueStoreServicer):
             
             print("Se ha recibido una peticion getPrefix")
             return response
+        finally:
+            # 2. Liberar todos los locks en el orden inverso, sin importar si hubo un error.
+            for lock in reversed(self.locks):
+                lock.release()            
     
     def Stat(self, request, context):
         """ Recupera las estadísticas del servidor """
-        with self.lock:
+        with self.locks[0]:
             # Objeto con todas las estadisticas del servidor
             response = key_value_store_service_pb2.StatResponse(
                 time_started = self.time_started,
