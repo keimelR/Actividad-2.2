@@ -55,7 +55,7 @@ def wait_for_server_ready(timeout=120):
 
 
 # Hilo que realiza solo operaciones de lectura mientras no se detenga
-def worker_read_only(stub, latencies, ops_counter, stop_event):
+def worker_read_only(stub, latencies, latencies_lock, ops_counter, ops_lock, stop_event):
     local_count = 0
     while not stop_event.is_set():
         key = random.choice(test_keys)
@@ -63,8 +63,12 @@ def worker_read_only(stub, latencies, ops_counter, stop_event):
         try:
             stub.Get(GetValue(key=key))
             latency_ms = (time.time() - start) * 1000  # Latencia en ms
-            latencies.append(latency_ms)
-            ops_counter.append(1)  # Contador de operaciones
+
+            # Añadir latencia y operación con bloqueo para evitar condiciones de carrera
+            with latencies_lock:
+                latencies.append(latency_ms)
+            with ops_lock:
+                ops_counter.append(1)  # Contador de operaciones
 
             local_count += 1
             if local_count % 100 == 0:
@@ -75,7 +79,7 @@ def worker_read_only(stub, latencies, ops_counter, stop_event):
 
 
 # Hilo que realiza operaciones de lectura o escritura (50% cada una)
-def worker_read_write(stub, latencies, ops_counter, stop_event):
+def worker_read_write(stub, latencies, latencies_lock, ops_counter, ops_lock, stop_event):
     local_count = 0
     while not stop_event.is_set():
         key = random.choice(test_keys)
@@ -85,8 +89,12 @@ def worker_read_write(stub, latencies, ops_counter, stop_event):
             try:
                 stub.Get(GetValue(key=key))
                 latency_ms = (time.time() - start) * 1000
-                latencies.append(latency_ms)
-                ops_counter.append(1)
+
+                # Añadir latencia y operación con bloqueo para evitar condiciones de carrera
+                with latencies_lock:
+                    latencies.append(latency_ms)
+                with ops_lock:
+                    ops_counter.append(1)
 
                 local_count += 1
                 if local_count % 100 == 0:
@@ -101,8 +109,12 @@ def worker_read_write(stub, latencies, ops_counter, stop_event):
             try:
                 stub.Set(SetKeyValue(key=key, value=value))
                 latency_ms = (time.time() - start) * 1000
-                latencies.append(latency_ms)
-                ops_counter.append(1)
+
+                # Añadir latencia y operación con bloqueo para evitar condiciones de carrera
+                with latencies_lock:
+                    latencies.append(latency_ms)
+                with ops_lock:
+                    ops_counter.append(1)
 
                 local_count += 1
                 if local_count % 100 == 0:
@@ -111,15 +123,17 @@ def worker_read_write(stub, latencies, ops_counter, stop_event):
             except:
                 pass
 
-def run_worker_thread(worker_func, latencies, ops_counter, stop_event):
+def run_worker_thread(worker_func, latencies, latencies_lock, ops_counter, ops_lock, stop_event):
     with grpc.insecure_channel(SERVER_ADDRESS) as channel:
         stub = KeyValueStoreStub(channel)
-        worker_func(stub, latencies, ops_counter, stop_event)
+        worker_func(stub, latencies, latencies_lock, ops_counter, ops_lock, stop_event)
 
 #Ejecuta el test con el número de clientes y modo (solo lectura o mixto).
 def run_test(num_clients, read_only=True):
     latencies = []
     ops_counter = []
+    latencies_lock = threading.Lock()  # Lock para proteger latencies
+    ops_lock = threading.Lock()        # Lock para proteger ops_counter
     stop_event = threading.Event()
 
     # Selecciona función del worker según tipo de carga
@@ -128,7 +142,7 @@ def run_test(num_clients, read_only=True):
     # Crear y lanzar hilos de clientes
     threads = []
     for _ in range(num_clients):
-        thread = threading.Thread(target=run_worker_thread, args=(worker_func, latencies, ops_counter, stop_event))
+        thread = threading.Thread(target=run_worker_thread, args=(worker_func, latencies, latencies_lock, ops_counter, ops_lock, stop_event))
         thread.start()
         threads.append(thread)
 
@@ -157,8 +171,8 @@ def main():
     # Espera a que el servidor esté listo
     wait_time = wait_for_server_ready()
     if wait_time is None:
-            print("No se pudo iniciar el servidor. Abortando.")
-            return
+        print("No se pudo iniciar el servidor. Abortando.")
+        return
 
     print("== Experimento Solo Lectura ==")
     for clients in CLIENT_COUNTS:
@@ -175,6 +189,22 @@ def main():
         results_mixed.append((latency, throughput))
 
     stop_server(proc)
+
+    # Imprimir tabla de resultados Solo Lectura
+    print("\nResultados Solo Lectura:")
+    print(f"{'Clientes':>8} | {'Latencia (ms)':>15} | {'Rendimiento (ops/s)':>20}")
+    print("-" * 50)
+    for i, clients in enumerate(CLIENT_COUNTS):
+        lat_r, thr_r = results_read[i]
+        print(f"{clients:>8} | {lat_r:15.3f} | {thr_r:20.2f}")
+
+    # Imprimir tabla de resultados Mixtos
+    print("\nResultados 50% Lectura / 50% Escritura:")
+    print(f"{'Clientes':>8} | {'Latencia (ms)':>15} | {'Rendimiento (ops/s)':>20}")
+    print("-" * 50)
+    for i, clients in enumerate(CLIENT_COUNTS):
+        lat_m, thr_m = results_mixed[i]
+        print(f"{clients:>8} | {lat_m:15.3f} | {thr_m:20.2f}")
 
     # Graficar resultados
     lat_read, thr_read = zip(*results_read)
