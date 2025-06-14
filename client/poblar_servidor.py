@@ -10,7 +10,10 @@ def populate_store(client):
         key = f"key_{i}"
         value = generate_value(VALUE_SIZE)
         client.set(key, value)
-        print(f"| {i + 1} / {NUM_KEYS} | OPERACION = SET | Key = {key} |")
+
+        # Reducir el ruido en consola
+        if (i + 1) % 100 == 0 or i == NUM_KEYS - 1:
+            print(f"| {i + 1} / {NUM_KEYS} | OPERACION = SET | Key = {key} |")
     print(" Población completada.")
 
 def main():

@@ -21,21 +21,27 @@ test_values = [''.join(random.choices(string.ascii_letters, k=VALUE_SIZE)) for _
 
 # Hilo que realiza solo operaciones de lectura mientras no se detenga
 def worker_read_only(stub, latencies, ops_counter, stop_event):
+    local_count = 0
     while not stop_event.is_set():
         key = random.choice(test_keys)
         start = time.time()
         try:
             stub.Get(GetValue(key=key))
-            latencies.append((time.time() - start) * 1000)  # Latencia en ms
+            latency_ms = (time.time() - start) * 1000  # Latencia en ms
+            latencies.append(latency_ms)
             ops_counter.append(1)  # Contador de operaciones
-            print(f"OPERACION = GET | Key = {key} | Latencia = {(time.time() - start):.6f}")
+
+            local_count += 1
+            if local_count % 100 == 0:
+                print(f"GET ops: {local_count} | Latencia: {latency_ms:.3f} ms")
 
         except Exception as e:
-            print(f"[ERROR] Lectura fallida para clave '{key}': {e}")
+            print(f"[ERROR] GET clave '{key}': {e}")
 
 
 # Hilo que realiza operaciones de lectura o escritura (50% cada una)
 def worker_read_write(stub, latencies, ops_counter, stop_event):
+    local_count = 0
     while not stop_event.is_set():
         key = random.choice(test_keys)
         if random.random() < 0.5:
@@ -43,9 +49,13 @@ def worker_read_write(stub, latencies, ops_counter, stop_event):
             start = time.time()
             try:
                 stub.Get(GetValue(key=key))
-                latencies.append((time.time() - start) * 1000)
+                latency_ms = (time.time() - start) * 1000
+                latencies.append(latency_ms)
                 ops_counter.append(1)
-                print(f"OPERACION = GET | Key = {key} | Latencia = {(time.time() - start):.6f}")
+
+                local_count += 1
+                if local_count % 100 == 0:
+                    print(f"GET ops: {local_count} | Latencia: {latency_ms:.3f} ms")
 
             except:
                 pass
@@ -55,9 +65,13 @@ def worker_read_write(stub, latencies, ops_counter, stop_event):
             start = time.time()
             try:
                 stub.Set(SetKeyValue(key=key, value=value))
-                latencies.append((time.time() - start) * 1000)
+                latency_ms = (time.time() - start) * 1000
+                latencies.append(latency_ms)
                 ops_counter.append(1)
-                print(f"OPERACION = SET | Key = {key} | Latencia = {(time.time() - start):.6f}")
+
+                local_count += 1
+                if local_count % 100 == 0:
+                    print(f"SET ops: {local_count} | Latencia: {latency_ms:.3f} ms")
 
             except:
                 pass
@@ -106,14 +120,14 @@ def main():
     for clients in CLIENT_COUNTS:
         print(f"{clients} cliente(s)...")
         latency, throughput = run_test(clients, read_only=True)
-        print(f"Latencia: {latency:.3f} ms | Rendimiento: {throughput:.2f} ops/s")
+        print(f"Latencia promedio: {latency:.3f} ms | Rendimiento: {throughput:.2f} ops/s")
         results_read.append((latency, throughput))
 
     print("\n== Experimento 50% Lectura / 50% Escritura ==")
     for clients in CLIENT_COUNTS:
         print(f"{clients} cliente(s)...")
         latency, throughput = run_test(clients, read_only=False)
-        print(f"Latencia: {latency:.3f} ms | Rendimiento: {throughput:.2f} ops/s")
+        print(f"Latencia promedio: {latency:.3f} ms | Rendimiento: {throughput:.2f} ops/s")
         results_mixed.append((latency, throughput))
 
     # Graficar resultados
