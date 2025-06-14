@@ -1,6 +1,6 @@
 import grpc
-import key_value_store_service_pb2 as pb2
-import key_value_store_service_pb2_grpc as pb2_grpc
+from client import key_value_store_service_pb2 as pb2
+from client import key_value_store_service_pb2_grpc as pb2_grpc
 import random
 import string
 

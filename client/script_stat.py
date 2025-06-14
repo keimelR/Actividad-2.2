@@ -5,8 +5,7 @@ import random
 import sys
 import grpc
 
-from lbclient import KVClient, generate_value
-from key_value_store_service_pb2 import SetKeyValue, GetValue, GetPrefix # Importar GetPrefix
+from client.lbclient import KVClient, generate_value
 
 from concurrent.futures import ThreadPoolExecutor # Necesario para gestionar los hilos
 
