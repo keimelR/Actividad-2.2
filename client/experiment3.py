@@ -19,6 +19,7 @@ CLIENT_COUNTS = [1, 2, 4, 8, 16, 32]  # Diferentes números de clientes
 test_keys = [f"key_{i}" for i in range(NUM_KEYS)]
 test_values = [''.join(random.choices(string.ascii_letters, k=VALUE_SIZE)) for _ in range(NUM_KEYS)]
 
+
 # Hilo que realiza solo operaciones de lectura mientras no se detenga
 def worker_read_only(stub, latencies, ops_counter, stop_event):
     local_count = 0
