@@ -1,112 +1,89 @@
 import time
 import random
 import statistics
-from lbclient import KVClient, generate_value  # Cliente gRPC para comunicarse con el servidor y función para generar valores de cierto tamaño
+from lbclient import KVClient, generate_value
 import matplotlib.pyplot as plt
 
-
-# Número total de claves a utilizar
 KEY_COUNT = 1000
-
-# Lista de tamaños de valores que se evaluarán (en bytes)
-VALUE_SIZES = [
-    512,        # 512 B
-    4096,       # 4 KB
-    524288,     # 512 KB
-    1048576,    # 1 MB
-    4194304     # 4 MB
-]
-
-# Número de operaciones a realizar en cada experimento (lecturas/escrituras)
 ITERATIONS = 100
+VALUE_SIZES = [512, 4096, 524288, 1048576, 4194304]  # bytes
 
-# FUNCIÓN: Solo Lectura
+# Solo lectura
 def benchmark_read_only(client, keys):
     latencies = []
     for i in range(ITERATIONS):
-        key = random.choice(keys)  # Selecciona una clave aleatoria
-        start = time.time()        # Marca el inicio del tiempo
-        client.get(key)            # Realiza una lectura
-        end = time.time()          # Marca el fin del tiempo
-        latencies.append(end - start)  # Calcula y guarda la latencia
-        print(f"| {i + 1} / {ITERATIONS} | OPERACION = SET | Key = {key} | LATENCIA = {(end - start):.6f} |")
-
+        key = random.choice(keys)
+        start = time.time()
+        client.get(key)
+        end = time.time()
+        latencies.append(end - start)
+        if i % 10 == 0:  # Mostrar progreso cada 10 iteraciones
+            print(f"[READ] {i + 1}/{ITERATIONS} | Key = {key} | Latencia = {(end - start):.6f}s")
+        if (i + 1) % 100 == 0:
+            print(f"[READ] {i + 1}/{ITERATIONS} | Key = {key} | Latencia = {(end - start):.6f}s")
     return latencies
 
-# FUNCIÓN: 50% Lectura / 50% Escritura
+# Lectura y escritura 50/50
 def benchmark_mixed(client, keys, value):
     latencies = []
     for i in range(ITERATIONS):
         key = random.choice(keys)
         if random.random() < 0.5:
-            # Operación de lectura
             start = time.time()
             client.get(key)
             end = time.time()
             operation_type = "GET"
         else:
-            # Operación de escritura
             start = time.time()
             client.set(key, value)
             end = time.time()
-            operation_type = "SET" 
-            
-        latencies.append(end - start)  # Registra la latencia de cada operación
-        print(f"| {i + 1} / {ITERATIONS} | OPERACION = {operation_type} | Key = {key} | LATENCIA = {(end - start):.6f} |")
-
+            operation_type = "SET"
+        latencies.append(end - start)
+        if i % 10 == 0:
+            print(f"[MIXED] {i + 1}/{ITERATIONS} | OPERACION = {operation_type} | Key = {key} | Latencia = {(end - start):.6f}s")
+        if (i + 1) % 100 == 0:
+            print(f"[MIXED] {i + 1}/{ITERATIONS} | OPERACION = {operation_type} | Key = {key} | Latencia = {(end - start):.6f}s")
     return latencies
 
-
-# FUNCIÓN PRINCIPAL: Ejecuta el experimento
 def run_experiment():
-    client = KVClient()  # Inicializa el cliente gRPC
-    keys = [f"key{i}" for i in range(KEY_COUNT)]  # Genera las claves: key0, key1, ..., key999
+    client = KVClient()
+    keys = [f"key{i}" for i in range(KEY_COUNT)]
 
-    print("Inicializando claves con valor pequeño...")
+    print("Inicializando claves...")
     for i, key in enumerate(keys):
-        print(f"| CLAVE NUMERO = {i + 1} | OPERACION = SET | KEY = {key} |")
-        client.set(key, "init")  # Pone un valor corto inicial en cada clave
+        client.set(key, "init")
+        if (i + 1) % 100 == 0:
+            print(f" - {i + 1} claves inicializadas")
 
     read_only_results = []
     mixed_results = []
 
-    # Itera sobre cada tamaño de valor definido
     for size in VALUE_SIZES:
-        print(f"\n== Valor de tamaño: {size} bytes ==")
-        value = generate_value(size)  # Genera un valor aleatorio del tamaño especificado
+        print(f"\n== Tamaño de valor: {size // 1024} KB ==")
+        value = generate_value(size)
 
-        # Sobrescribe todas las claves con valores del tamaño actual
-        print("Sobrescribiendo claves con valores grandes...")
+        print("Sobrescribiendo claves con el nuevo valor...")
         for i, key in enumerate(keys):
             client.set(key, value)
-            print(f"| CLAVE NUMERO = {i + 1} | OPERACION = SET | KEY = {key} |")
+        print(" - Claves actualizadas.")
 
-
-        # Experimento 1: Solo lecturas
-        print(">> Ejecutando carga de solo lectura...")
-        read_latencies = benchmark_read_only(client, keys)
-        
+        print(">> Cargando solo lectura...")
         read_latencies = benchmark_read_only(client, keys)
         read_avg = statistics.mean(read_latencies)
-        
-        print(f"[READ ONLY] Latencia promedio: {statistics.mean(read_latencies):.6f}s")
         read_only_results.append(read_avg)
+        print(f"[READ ONLY] Latencia promedio: {read_avg:.6f}s")
 
-
-        # Experimento 1.1: Lectura y escritura 50/50
-        print(">> Ejecutando carga 50/50 lectura/escritura...")
+        print(">> Carga 50% lectura / 50% escritura...")
         mixed_latencies = benchmark_mixed(client, keys, value)
         mixed_avg = statistics.mean(mixed_latencies)
-        mixed_latencies = benchmark_mixed(client, keys, value)
-        print(f"[MIXED] Latencia promedio: {statistics.mean(mixed_latencies):.6f}s")
         mixed_results.append(mixed_avg)
+        print(f"[MIXED] Latencia promedio: {mixed_avg:.6f}s")
 
-    client.close()  # Finaliza la conexión con el servidor
-    
-    # Generar gráfico
-    plt.figure(figsize=(10, 6))
+    client.close()
+
+    # Graficar resultados
     sizes_kb = [s // 1024 for s in VALUE_SIZES]
-
+    plt.figure(figsize=(10, 6))
     plt.plot(sizes_kb, read_only_results, marker='o', label="Solo lectura")
     plt.plot(sizes_kb, mixed_results, marker='s', label="Lectura/Escritura 50/50")
 
@@ -119,6 +96,5 @@ def run_experiment():
     plt.savefig("experimento1_latencias.png")
     plt.show()
 
-
 if __name__ == "__main__":
-    run_experiment()  
+    run_experiment()
