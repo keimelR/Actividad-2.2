@@ -5,9 +5,16 @@ import random
 import string
 import matplotlib.pyplot as plt
 
+import subprocess
+import sys
+import os
+
+from client.lbclient import KVClient, generate_value
 from concurrent.futures import ThreadPoolExecutor
-from key_value_store_service_pb2 import SetKeyValue, GetValue
-from key_value_store_service_pb2_grpc import KeyValueStoreStub
+from client.key_value_store_service_pb2 import SetKeyValue, GetValue
+from client.key_value_store_service_pb2_grpc import KeyValueStoreStub
+
+server_script = os.path.abspath("./server/lbserver.py")
 
 SERVER_ADDRESS = "localhost:50051"
 VALUE_SIZE = 1024  # Tamaño valor en bytes (1 KB)
@@ -18,6 +25,33 @@ CLIENT_COUNTS = [1, 2, 4, 8, 16, 32]  # Diferentes números de clientes
 # Generar claves y valores de prueba aleatorios
 test_keys = [f"key_{i}" for i in range(NUM_KEYS)]
 test_values = [''.join(random.choices(string.ascii_letters, k=VALUE_SIZE)) for _ in range(NUM_KEYS)]
+
+def start_server():
+    print("\nIniciando el servidor...")
+    # sys.executable asegura que se use el mismo intérprete Python
+    return subprocess.Popen([sys.executable, server_script])
+
+def stop_server(proc):
+    print("\nDeteniendo el servidor...")
+    proc.terminate()
+    proc.wait()
+    print("Servidor detenido.")
+
+# Espera hasta que el servidor esté listo para aceptar peticiones usando stat cada 0.5 segundos.
+def wait_for_server_ready(timeout=120):
+    print("Esperando que el servidor esté listo...")
+    start = time.time()
+    client = KVClient()
+    while time.time() - start < timeout:
+        try:
+            client.stat()  # Comprueba si el servidor está disponible
+            client.close()
+            print("Servidor listo.")
+            return time.time() - start
+        except:
+            time.sleep(0.5)
+    print("El servidor no respondió a tiempo.")
+    return None
 
 
 # Hilo que realiza solo operaciones de lectura mientras no se detenga
@@ -116,6 +150,15 @@ def run_test(num_clients, read_only=True):
 def main():
     results_read = []
     results_mixed = []
+    
+    # Inicia el servidor
+    proc = start_server()
+        
+    # Espera a que el servidor esté listo
+    wait_time = wait_for_server_ready()
+    if wait_time is None:
+            print("No se pudo iniciar el servidor. Abortando.")
+            return
 
     print("== Experimento Solo Lectura ==")
     for clients in CLIENT_COUNTS:
@@ -130,6 +173,8 @@ def main():
         latency, throughput = run_test(clients, read_only=False)
         print(f"Latencia promedio: {latency:.3f} ms | Rendimiento: {throughput:.2f} ops/s")
         results_mixed.append((latency, throughput))
+
+    stop_server(proc)
 
     # Graficar resultados
     lat_read, thr_read = zip(*results_read)
@@ -146,7 +191,7 @@ def main():
     plt.tight_layout()
     plt.savefig("experiment3_results.png")
     plt.show()
-
+    
 
 if __name__ == "__main__":
     main()

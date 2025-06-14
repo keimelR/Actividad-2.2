@@ -2,7 +2,7 @@ import time
 import subprocess
 import os
 import random
-from lbclient import KVClient, generate_value
+from client.lbclient import KVClient, generate_value
 import sys
 import matplotlib.pyplot as plt
 
