@@ -20,7 +20,7 @@ class KeyValueServer(key_value_store_service_pb2_grpc.KeyValueStoreServicer):
         # Pool de hilos para gestionar la concurrencia
         self.num_locks = num_locks
         self.locks = [threading.Lock() for _ in range(num_locks)]
-        
+                
         # Metricas del servidor
         self.time_started = datetime.datetime.now().isoformat()
         self.total_requests = 0
@@ -129,33 +129,30 @@ class KeyValueServer(key_value_store_service_pb2_grpc.KeyValueStoreServicer):
     def GetPrefixKey(self, request, context):
         """ Devuelve una lista de valores cuyas claves empiezan por prefixKey """
         
-        for lock in self.locks:
-            lock.acquire()
+        if not hasattr(self, 'data_lock'):
+            self.data_lock = threading.Lock()
+
+        with self.data_lock:
+            data_copy = self.data.copy()
             
-        try:
-            # Iniciamos una lista de claves y valores (para valores coincidentes)
-            keys = []
-            values = []
+        # Iniciamos una lista de claves y valores (para valores coincidentes)
+        keys = []
+        values = []
             
-            # Recorremos el diccionario en busca de claves que empiecen por prefixKey, en caso de encontrar, se le añade a las listas de claves y valores
-            for key, value in self.data.items():
-                if key.startswith(request.prefixKey):
+        # Recorremos el diccionario en busca de claves que empiecen por prefixKey, en caso de encontrar, se le añade a las listas de claves y valores
+        for key, value in data_copy.items():
+            if key.startswith(request.prefixKey):
                     keys.append(key)
                     values.append(value)
             
-            # Objeto que sera enviado al cliente con la respuesta deseada (lista de valores que empiezan por la prefixKey)
-            response = key_value_store_service_pb2.GetPrefixResponse(keys = keys, values = values)
+        # Objeto que sera enviado al cliente con la respuesta deseada (lista de valores que empiezan por la prefixKey)
+        response = key_value_store_service_pb2.GetPrefixResponse(keys = keys, values = values)
             
-            # Incrementamos el numero de peticiones totales y peticiones get_prefix
-            self.total_get_prefix_requests += 1
-            self.total_requests += 1
+        # Incrementamos el numero de peticiones totales y peticiones get_prefix
+        self.total_get_prefix_requests += 1
+        self.total_requests += 1
             
-            print("Se ha recibido una peticion getPrefix")
-            return response
-        finally:
-            # 2. Liberar todos los locks en el orden inverso, sin importar si hubo un error.
-            for lock in reversed(self.locks):
-                lock.release()            
+        return response     
     
     def Stat(self, request, context):
         """ Recupera las estadísticas del servidor """
